@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware';
 import { getDBStatus } from './config/db';
 import { apiResponse } from './utils/apiResponse';
+import authRoutes from './routes/auth.routes';
+
 
 const app: Application = express();
 
@@ -31,7 +33,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
   );
 });
 
-
+// Routes
+app.use('/api/auth', authRoutes);
 
 
 // 404 + error handlers 
