@@ -5,19 +5,35 @@ import {
   UpdateTransactionInput,
   ListTransactionsQuery,
 } from '../validators/transaction.schema';
+import { categorizeTransaction } from './categorizer.service';
+
 
 export const createManualTransaction = async (
   userId: string,
   data: CreateTransactionInput
 ): Promise<ITransaction> => {
+  let category = data.category;
+  let categorySource: 'auto' | 'manual' = 'manual';
+
+  // If no category provided, try auto-categorizing
+  if (!category) {
+    const catResult = await categorizeTransaction(
+      data.merchant ?? null,
+      data.rawSms ?? null,
+      userId
+    );
+    category = catResult.category;
+    categorySource = 'auto';
+  }
+
   const tx = await Transaction.create({
     userId,
     amount: data.amount,
     type: data.type,
     bank: data.bank,
     merchant: data.merchant,
-    category: data.category || 'uncategorized',
-    categorySource: 'manual',
+    category,
+    categorySource,
     channel: 'manual',
     date: data.date || new Date(),
     rawSms: data.rawSms,

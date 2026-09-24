@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { parseSms } from '../services/smsParser.service';
+import { categorizeTransaction } from '../services/categorizer.service';
 import { Transaction } from '../models/Transaction.model';
 import { asyncHandler } from '../utils/asyncHandler';
 import { apiResponse } from '../utils/apiResponse';
@@ -32,33 +33,37 @@ export const parseSmsEndpoint = asyncHandler(
     const parsed = result.data;
 
     if (parsed.amount === null) {
-    return apiResponse(
+      return apiResponse(
         res,
         { bank: parsed.bank, parsed },
         'Failed to extract amount from SMS',
         422
-    );
+      );
     }
 
-    const category = 'uncategorized';
-    const categorySource: 'auto' | 'manual' = 'auto';
+    // Auto-categorize
+    const catResult = await categorizeTransaction(
+      parsed.merchant,
+      parsed.rawSms,
+      uid(req)
+    );
 
     const tx = await Transaction.create({
-    userId: uid(req),
-    amount: parsed.amount,       
-    type: parsed.type ?? 'debit',
-    bank: parsed.bank ?? undefined,
-    merchant: parsed.merchant ?? undefined,
-    category,
-    categorySource,
-    channel: 'sms',
-    date: parsed.date ?? new Date(),
-    rawSms: parsed.rawSms,
+      userId: uid(req),
+      amount: parsed.amount,
+      type: parsed.type ?? 'debit',
+      bank: parsed.bank ?? undefined,
+      merchant: parsed.merchant ?? undefined,
+      category: catResult.category,
+      categorySource: 'auto',
+      channel: 'sms',
+      date: parsed.date ?? new Date(),
+      rawSms: parsed.rawSms,
     });
 
     return apiResponse(
       res,
-      { bank: parsed.bank, transaction: tx },
+      { bank: parsed.bank, transaction: tx, isFlagged: catResult.isFlagged },
       'SMS parsed and saved',
       201
     );

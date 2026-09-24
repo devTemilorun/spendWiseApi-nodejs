@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
 import categoryRoutes from './routes/category.routes';
 import smsRoutes from './routes/sms.routes';
+import budgetRoutes from './routes/budget.routes';
+
 
 
 
@@ -42,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/budgets', budgetRoutes);
 
 
 // 404 + error handlers 
