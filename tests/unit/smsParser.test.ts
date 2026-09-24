@@ -95,3 +95,164 @@ describe('SMS Parser — UBA', () => {
     expect(result.amount).toBe(8500);
   });
 });
+
+
+import {
+  parseFirstBank,
+  parseOpay,
+  parseKuda,
+  parseMoniepoint,
+  detectBank,
+  parseSms,
+} from '../../src/services/smsParser.service';
+
+describe('SMS Parser — FirstBank', () => {
+  it('parses a FirstBank debit alert', () => {
+    const sms =
+      'FirstBank: Your A/C ...1234 has been debited with NGN3,000.00. Available Bal:NGN45,000.00. Desc: USSD/TRANSFER';
+    const result = parseFirstBank(sms);
+
+    expect(result.bank).toBe('FirstBank');
+    expect(result.type).toBe('debit');
+    expect(result.amount).toBe(3000);
+    expect(result.parseFailed).toBe(false);
+  });
+
+  it('parses a FirstBank credit alert', () => {
+    const sms =
+      'FirstBank: Your A/C ...1234 has been credited with NGN20,000.00. Desc: SALARY';
+    const result = parseFirstBank(sms);
+
+    expect(result.type).toBe('credit');
+    expect(result.amount).toBe(20000);
+  });
+});
+
+describe('SMS Parser — Opay', () => {
+  it('parses an Opay debit alert', () => {
+    const sms =
+      'Opay: Debit Alert! NGN2,500 has been deducted from your wallet for Payment to NETFLIX';
+    const result = parseOpay(sms);
+
+    expect(result.bank).toBe('Opay');
+    expect(result.type).toBe('debit');
+    expect(result.amount).toBe(2500);
+    expect(result.parseFailed).toBe(false);
+  });
+
+  it('parses an Opay credit alert', () => {
+    const sms =
+      'Opay: Credit Alert! NGN5,000 has been credited to your wallet from JOHN DOE';
+    const result = parseOpay(sms);
+
+    expect(result.type).toBe('credit');
+    expect(result.amount).toBe(5000);
+  });
+});
+
+describe('SMS Parser — Kuda', () => {
+  it('parses a Kuda debit alert', () => {
+    const sms =
+      'Kuda: You spent NGN1,200.00 at UBER at 14:32 on 19-Sep-2026';
+    const result = parseKuda(sms);
+
+    expect(result.bank).toBe('Kuda');
+    expect(result.type).toBe('debit');
+    expect(result.amount).toBe(1200);
+    expect(result.merchant).toContain('UBER');
+  });
+
+  it('parses a Kuda credit alert', () => {
+    const sms = 'Kuda: You received NGN15,000.00 from JANE SMITH';
+    const result = parseKuda(sms);
+
+    expect(result.type).toBe('credit');
+    expect(result.amount).toBe(15000);
+  });
+});
+
+describe('SMS Parser — Moniepoint', () => {
+  it('parses a Moniepoint debit alert', () => {
+    const sms =
+      'Moniepoint: A debit of NGN8,000.00 was made on your account. Narration: POS/MARKET SQUARE';
+    const result = parseMoniepoint(sms);
+
+    expect(result.bank).toBe('Moniepoint');
+    expect(result.type).toBe('debit');
+    expect(result.amount).toBe(8000);
+    expect(result.parseFailed).toBe(false);
+  });
+
+  it('parses a Moniepoint credit alert', () => {
+    const sms =
+      'Moniepoint: A credit of NGN30,000.00 was made on your account. Narration: TRANSFER';
+    const result = parseMoniepoint(sms);
+
+    expect(result.type).toBe('credit');
+    expect(result.amount).toBe(30000);
+  });
+});
+
+describe('detectBank — dispatcher routing', () => {
+  it('detects GTB', () => {
+    expect(detectBank('GTBank: Debit Amt:NGN1,000')).toBe('GTB');
+  });
+
+  it('detects Access', () => {
+    expect(detectBank('Access Bank: A debit of NGN500')).toBe('Access');
+  });
+
+  it('detects UBA', () => {
+    expect(detectBank('UBA: Your account has been debited')).toBe('UBA');
+  });
+
+  it('detects FirstBank', () => {
+    expect(detectBank('FirstBank: Your A/C has been debited')).toBe('FirstBank');
+  });
+
+  it('detects Opay', () => {
+    expect(detectBank('Opay: Debit Alert! NGN2,500')).toBe('Opay');
+  });
+
+  it('detects Kuda', () => {
+    expect(detectBank('Kuda: You spent NGN1,200')).toBe('Kuda');
+  });
+
+  it('detects Moniepoint', () => {
+    expect(detectBank('Moniepoint: A debit of NGN8,000')).toBe('Moniepoint');
+  });
+
+  it('returns null for unknown SMS', () => {
+    expect(detectBank('Random message from an unknown sender')).toBeNull();
+  });
+});
+
+describe('parseSms — full dispatcher', () => {
+  it('routes GTB SMS to the GTB parser and returns success', () => {
+    const sms =
+      'GTBank: Acct:****1234 Debit Amt:NGN4,500.00 on 19-Sep-2026 Desc:USSD/TRANSFER';
+    const result = parseSms(sms);
+
+    expect(result.success).toBe(true);
+    expect(result.bank).toBe('GTB');
+    expect(result.data?.amount).toBe(4500);
+  });
+
+  it('routes Opay SMS to the Opay parser', () => {
+    const sms =
+      'Opay: Debit Alert! NGN2,500 has been deducted from your wallet for Payment to NETFLIX';
+    const result = parseSms(sms);
+
+    expect(result.success).toBe(true);
+    expect(result.bank).toBe('Opay');
+    expect(result.data?.amount).toBe(2500);
+  });
+
+  it('returns failure when bank is unknown', () => {
+    const result = parseSms('Hello, this is not a bank SMS');
+
+    expect(result.success).toBe(false);
+    expect(result.bank).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+});

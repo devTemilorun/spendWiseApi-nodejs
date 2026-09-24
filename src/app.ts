@@ -8,6 +8,8 @@ import { apiResponse } from './utils/apiResponse';
 import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
 import categoryRoutes from './routes/category.routes';
+import smsRoutes from './routes/sms.routes';
+
 
 
 const app: Application = express();
@@ -39,6 +41,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/sms', smsRoutes);
 
 
 // 404 + error handlers 
