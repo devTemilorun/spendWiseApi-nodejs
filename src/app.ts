@@ -6,6 +6,8 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middle
 import { getDBStatus } from './config/db';
 import { apiResponse } from './utils/apiResponse';
 import authRoutes from './routes/auth.routes';
+import transactionRoutes from './routes/transaction.routes';
+import categoryRoutes from './routes/category.routes';
 
 
 const app: Application = express();
@@ -35,6 +37,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/categories', categoryRoutes);
 
 
 // 404 + error handlers 
