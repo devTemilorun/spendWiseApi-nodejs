@@ -10,6 +10,8 @@ import transactionRoutes from './routes/transaction.routes';
 import categoryRoutes from './routes/category.routes';
 import smsRoutes from './routes/sms.routes';
 import budgetRoutes from './routes/budget.routes';
+import analyticsRoutes from './routes/analytics.routes';
+
 
 
 
@@ -45,6 +47,8 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/budgets', budgetRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
 
 
 // 404 + error handlers 
