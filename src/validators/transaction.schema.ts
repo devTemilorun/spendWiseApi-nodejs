@@ -27,6 +27,10 @@ export const createCategorySchema = z.object({
   keywords: z.array(z.string().trim()).default([]),
 });
 
+export const bulkImportSchema = z.object({
+  smsMessages: z.array(z.string().min(10)).min(1).max(100),
+});
+
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;

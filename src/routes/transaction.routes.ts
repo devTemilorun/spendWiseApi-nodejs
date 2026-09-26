@@ -7,6 +7,8 @@ import {
   updateTransactionSchema,
   listTransactionsQuerySchema,
 } from '../validators/transaction.schema';
+import { bulkImportLimiter } from '../middlewares/rateLimiter.middleware';
+import { bulkImportSchema } from '../validators/transaction.schema';
 
 const router = Router();
 
@@ -29,5 +31,11 @@ router.put(
   txController.updateTransaction
 );
 router.delete('/:id', txController.deleteTransaction);
+router.post(
+  '/bulk',
+  bulkImportLimiter,
+  validate(bulkImportSchema),
+  txController.bulkImportTransactions
+);
 
 export default router;
