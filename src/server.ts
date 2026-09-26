@@ -3,9 +3,13 @@ import mongoose from 'mongoose';
 import app from './app';
 import { connectDB } from './config/db';
 import { env } from './config/env';
+import { registerMonthlyReportCron } from './jobs/monthlyReport.cron';
+
 
 const start = async (): Promise<void> => {
   await connectDB();
+
+  registerMonthlyReportCron();
 
   const server = http.createServer(app);
 

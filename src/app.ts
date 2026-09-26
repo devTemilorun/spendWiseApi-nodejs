@@ -12,10 +12,7 @@ import smsRoutes from './routes/sms.routes';
 import budgetRoutes from './routes/budget.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
-
-
-
-
+import reportRoutes from './routes/report.routes';
 
 
 const app: Application = express();
@@ -51,6 +48,7 @@ app.use('/api/sms', smsRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
 
 
 
