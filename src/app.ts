@@ -11,6 +11,8 @@ import categoryRoutes from './routes/category.routes';
 import smsRoutes from './routes/sms.routes';
 import budgetRoutes from './routes/budget.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import notificationRoutes from './routes/notification.routes';
+
 
 
 
@@ -48,6 +50,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 

@@ -1,11 +1,13 @@
 import { Transaction, ITransaction } from '../models/Transaction.model';
 import { AppError } from '../utils/AppError';
+import { evaluateBudgetAlerts } from './budgetAlert.service';
 import {
   CreateTransactionInput,
   UpdateTransactionInput,
   ListTransactionsQuery,
 } from '../validators/transaction.schema';
 import { categorizeTransaction } from './categorizer.service';
+
 
 
 export const createManualTransaction = async (
@@ -15,7 +17,6 @@ export const createManualTransaction = async (
   let category = data.category;
   let categorySource: 'auto' | 'manual' = 'manual';
 
-  // If no category provided, try auto-categorizing
   if (!category) {
     const catResult = await categorizeTransaction(
       data.merchant ?? null,
@@ -38,6 +39,13 @@ export const createManualTransaction = async (
     date: data.date || new Date(),
     rawSms: data.rawSms,
   });
+
+  if (tx.type === 'debit') {
+    evaluateBudgetAlerts(userId, tx.category, tx.date).catch((err) =>
+      console.error('Budget alert failed:', err)
+    );
+  }
+
   return tx;
 };
 

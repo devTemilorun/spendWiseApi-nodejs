@@ -5,6 +5,8 @@ import { Transaction } from '../models/Transaction.model';
 import { asyncHandler } from '../utils/asyncHandler';
 import { apiResponse } from '../utils/apiResponse';
 import { AppError } from '../utils/AppError';
+import { evaluateBudgetAlerts } from '../services/budgetAlert.service';
+
 
 const uid = (req: Request): string => {
   if (!req.user) throw new AppError('Not authenticated', 401);
@@ -60,6 +62,12 @@ export const parseSmsEndpoint = asyncHandler(
       date: parsed.date ?? new Date(),
       rawSms: parsed.rawSms,
     });
+
+    if (tx.type === 'debit') {
+      evaluateBudgetAlerts(uid(req), tx.category, tx.date).catch((err) =>
+        console.error('Budget alert failed:', err)
+      );
+    }
 
     return apiResponse(
       res,
