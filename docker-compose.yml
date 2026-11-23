@@ -1,0 +1,40 @@
+services:
+  api:
+    build: .
+    container_name: spendwise-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/spendwise
+      NODE_ENV: production
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - spendwise
+
+  mongo:
+    image: mongo:7
+    container_name: spendwise-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spendwise
+
+volumes:
+  mongo-data:
+
+networks:
+  spendwise:
+    driver: bridge
