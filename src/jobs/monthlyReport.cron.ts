@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import cron, { ScheduledTask } from 'node-cron';
 import { User } from '../models/User.model';
 import { generateMonthlyReport, formatReportAsText } from '../services/report.service';
 import { queueNotification } from '../services/notification.service';
@@ -38,7 +38,7 @@ export const runMonthlyReportJob = async (): Promise<void> => {
   );
 };
 
-// Register the cron job — runs 00:05 on the 1st of every month.
+// Register the cron job
 export const registerMonthlyReportCron = (): void => {
   cron.schedule(
     '5 0 1 * *',
@@ -51,4 +51,16 @@ export const registerMonthlyReportCron = (): void => {
   );
 
   console.log('Monthly report cron registered (00:05 on the 1st, Africa/Lagos)');
+};
+
+// Stop the registered cron task on shutdown.
+let monthlyReportTask: ScheduledTask | null = null;
+
+
+export const stopMonthlyReportCron = (): void => {
+  if (monthlyReportTask) {
+    monthlyReportTask.stop();
+    monthlyReportTask = null;
+    console.log('Monthly report cron stopped');
+  }
 };

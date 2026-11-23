@@ -14,8 +14,6 @@ const monthRange = (month: string) => {
   };
 };
 
-
-
 export const setBudget = async (
   userId: string,
   data: SetBudgetInput
@@ -57,14 +55,6 @@ export const deleteBudget = async (
   if (!result) throw new AppError('Budget not found', 404);
 };
 
-
-
-
-
-/**
- * Returns { percentUsed, breached: number[] }
- * breached = thresholds crossed (e.g. [50, 80] if at 82%)
- */
 export const checkBudgetThreshold = async (
   userId: string,
   category: string,
@@ -101,4 +91,67 @@ export const checkBudgetThreshold = async (
     percentUsed: +percentUsed.toFixed(2),
     breached,
   };
+};
+
+export interface BudgetWithSpending {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  category: string;
+  monthlyLimit: number;
+  month: string;
+  alertThresholds: number[];
+  spent: number;
+  percentUsed: number;
+  breached: number[];
+}
+
+export const getBudgetsWithSpending = async (
+  userId: string,
+  month: string
+): Promise<BudgetWithSpending[]> => {
+  const budgets = await Budget.find({ userId, month }).sort({ category: 1 });
+  if (budgets.length === 0) return [];
+
+  const { start, end } = monthRange(month);
+
+  const spendRows = await Transaction.aggregate([
+    {
+      $match: {
+        userId: toObjectId(userId),
+        type: 'debit',
+        date: { $gte: start, $lt: end },
+        category: { $in: budgets.map((b) => b.category) },
+      },
+    },
+    {
+      $group: {
+        _id: '$category',
+        total: { $sum: '$amount' },
+      },
+    },
+  ]);
+
+  const spentByCategory = new Map<string, number>(
+    spendRows.map((r: { _id: string; total: number }) => [r._id, r.total])
+  );
+
+  return budgets.map((b) => {
+    const spent = spentByCategory.get(b.category) ?? 0;
+    const percentUsed =
+      b.monthlyLimit > 0 ? +((spent / b.monthlyLimit) * 100).toFixed(2) : 0;
+    const breached = b.alertThresholds
+      .filter((t) => percentUsed >= t)
+      .sort((a, b2) => a - b2);
+    return {
+      _id: b._id,
+      userId: b.userId,
+      category: b.category,
+      monthlyLimit: b.monthlyLimit,
+      month: b.month,
+      alertThresholds: b.alertThresholds,
+      spent,
+      percentUsed,
+      breached,
+    };
+  });
 };

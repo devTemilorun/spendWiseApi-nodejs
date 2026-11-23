@@ -1,4 +1,3 @@
-
 import { Request, Response, NextFunction } from 'express';
 import { ZodObject, ZodRawShape, ZodError } from 'zod';
 import { AppError } from '../utils/AppError';
@@ -7,15 +6,30 @@ type Source = 'body' | 'query' | 'params';
 
 export const validate =
   (schema: ZodObject<ZodRawShape>, source: Source = 'body') =>
-  (req: Request, _res: Response, next: NextFunction): void => {
+  (req: Request, res: Response, next: NextFunction): void => {
     try {
       const parsed = schema.parse(req[source]);
-      (req as any)[source] = parsed;
+
+      if (source === 'body') {
+        req.body = parsed;
+      }
+
+      res.locals.validated = res.locals.validated || {};
+      res.locals.validated[source] = parsed;
+
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        const issues = err.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-        return next(new AppError(`Validation failed — ${issues.join('; ')}`, 400));
+        const issues = err.issues.map(
+          (i) => `${i.path.join('.') || '(root)'}: ${i.message}`
+        );
+        console.error(
+          `[validate] ${req.method} ${req.originalUrl} (${source}) failed:`,
+          issues
+        );
+        return next(
+          new AppError(`Validation failed — ${issues.join('; ')}`, 400)
+        );
       }
       next(err);
     }

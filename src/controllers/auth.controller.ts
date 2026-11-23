@@ -3,6 +3,7 @@ import * as authService from '../services/auth.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { apiResponse } from '../utils/apiResponse';
 import { AppError } from '../utils/AppError';
+import { User } from '../models/User.model';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.register(req.body);
@@ -34,7 +35,32 @@ export const changePassword = asyncHandler(
   }
 );
 
-export const me = asyncHandler(async (req: Request, res: Response) => {
+export const forgotPasswordController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const rawToken = await authService.forgotPassword(req.body.email);
+    // Never leak whether the email exists.
+    const payload: Record<string, unknown> = {};
+    if (rawToken && process.env.NODE_ENV !== 'production') {
+      payload.resetToken = rawToken; // dev/test convenience 
+    }
+    return apiResponse(
+      res,
+      payload,
+      'If that email exists, a reset link has been sent'
+    );
+  }
+);
+
+export const resetPasswordController = asyncHandler(
+  async (req: Request, res: Response) => {
+    await authService.resetPassword(req.body.token, req.body.newPassword);
+    return apiResponse(res, null, 'Password reset successful');
+  }
+);
+
+export const getMe = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) throw new AppError('Not authenticated', 401);
-  return apiResponse(res, { userId: req.user.userId, email: req.user.email }, 'OK');
+  const user = await User.findById(req.user.userId);
+  if (!user) throw new AppError('User not found', 404);
+  return apiResponse(res, user, 'Profile fetched');
 });

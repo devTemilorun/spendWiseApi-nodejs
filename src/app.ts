@@ -13,15 +13,47 @@ import budgetRoutes from './routes/budget.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
 import reportRoutes from './routes/report.routes';
+import userRoutes from './routes/user.routes';
+
 
 
 const app: Application = express();
 
 // Security & parsing middleware
-app.use(helmet());
-app.use(cors());
+const parseOrigins = (): string[] =>
+  (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const allowedOrigins = parseOrigins();
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow same-origin / server-to-server / Postman requests
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'no-referrer' },
+    hsts: process.env.NODE_ENV === 'production'
+      ? { maxAge: 31536000, includeSubDomains: true }
+      : false,
+  })
+);
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -49,6 +81,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/users', userRoutes);
 
 
 

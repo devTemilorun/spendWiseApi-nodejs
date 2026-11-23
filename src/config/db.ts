@@ -8,7 +8,7 @@ export const connectDB = async (): Promise<void> => {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       await mongoose.connect(env.MONGO_URI);
-      console.log(`✅ MongoDB connected: ${mongoose.connection.host}`);
+      console.log(` MongoDB connected: ${mongoose.connection.host}`);
       return;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';

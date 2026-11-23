@@ -16,7 +16,7 @@ export const setBudget = asyncHandler(async (req: Request, res: Response) => {
 
 export const listBudgets = asyncHandler(async (req: Request, res: Response) => {
   const { month } = req.query as { month: string };
-  const budgets = await budgetService.listBudgets(uid(req), month);
+  const budgets = await budgetService.getBudgetsWithSpending(uid(req), month);
   return apiResponse(res, budgets, 'Budgets fetched');
 });
 

@@ -11,8 +11,6 @@ import { hashSms } from '../utils/hash';
 import { env } from '../config/env';
 import { ITransaction } from '../models/Transaction.model';
 
-
-
 const uid = (req: Request): string => {
   if (!req.user) throw new AppError('Not authenticated', 401);
   return req.user.userId;
@@ -28,6 +26,11 @@ export const parseSmsEndpoint = asyncHandler(
 
     const result = parseSms(sms, senderId);
 
+    // DEBUG: log what the parser actually returned
+    console.log('[sms.parse] input =', JSON.stringify(sms));
+    console.log('[sms.parse] senderId =', senderId);
+    console.log('[sms.parse] result =', JSON.stringify(result, null, 2));
+
     if (!result.success || !result.data) {
       return apiResponse(
         res,
@@ -42,6 +45,7 @@ export const parseSmsEndpoint = asyncHandler(
     const parsed = result.data;
 
     if (parsed.amount === null) {
+      console.warn('[sms.parse] amount is null, parsed =', parsed);
       return apiResponse(
         res,
         { bank: parsed.bank, parsed },
@@ -50,7 +54,6 @@ export const parseSmsEndpoint = asyncHandler(
       );
     }
 
-    
     if (existing) {
       return apiResponse(
         res,
@@ -95,15 +98,10 @@ export const parseSmsEndpoint = asyncHandler(
   }
 );
 
-
-
-
 export const handleSmsWebhook = asyncHandler(
   async (req: Request, res: Response) => {
-    // 1. Verify shared secret
     const secret = req.headers['x-webhook-secret'];
     if (!secret || secret !== env.SMS_WEBHOOK_SECRET) {
-      // Gateways often expect 200; return 401 only for actual bad secret
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -114,12 +112,10 @@ export const handleSmsWebhook = asyncHandler(
     };
 
     if (!to || !text) {
-      // Gateways expect 200 even on malformed 
       console.warn('[WEBHOOK] Missing "to" or "text" in payload');
       return res.status(200).json({ success: true, message: 'Ignored' });
     }
 
-    // 2. Identify user by forwarding number
     const user = await User.findOne({ smsForwardingNumber: to });
     if (!user) {
       console.warn(`[WEBHOOK] No user found for number ${to}`);
@@ -128,7 +124,6 @@ export const handleSmsWebhook = asyncHandler(
 
     const userId = user._id.toString();
 
-    // 3. Duplicate check
     const smsHash = hashSms(text, userId);
     const existing = await Transaction.findOne({ smsHash });
     if (existing) {
@@ -151,7 +146,6 @@ export const handleSmsWebhook = asyncHandler(
 
     const parsed = result.data;
 
-    // Narrow amount after we know `parsed` exists
     if (parsed.amount === null) {
       console.warn('[WEBHOOK] Could not extract amount');
       return res.status(200).json({
@@ -161,7 +155,6 @@ export const handleSmsWebhook = asyncHandler(
       });
     }
 
-    // 5. Categorize + save
     const catResult = await categorizeTransaction(
       parsed.merchant,
       parsed.rawSms,

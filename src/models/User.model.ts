@@ -1,4 +1,3 @@
-
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -12,6 +11,8 @@ export interface IUser extends Document {
   monthlyIncome?: number;
   smsForwardingNumber?: string;
   refreshTokenHash?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -34,6 +35,8 @@ const userSchema = new Schema<IUser>(
     monthlyIncome: { type: Number },
     smsForwardingNumber: { type: String, trim: true, unique: true, sparse: true },
     refreshTokenHash: { type: String, select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
   },
   { timestamps: true }
 );

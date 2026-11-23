@@ -7,14 +7,22 @@ import {
   extractDate,
 } from '../utils/smsHelpers';
 
-// GTB
+// ---------- Regex helpers ----------
+// All amount captures follow the same pattern:
+//   NGN 14,200.00   NGN14,200.00   N14,200.00   ₦14,200.00
+// → (?:NGN|N|₦)?\s*([\d,]+(?:\.\d{1,2})?)
+// The `\s*` after the currency token is what was missing everywhere.
+
+const AMOUNT_TAIL = String.raw`(?:NGN|N|₦)?\s*([\d,]+(?:\.\d{1,2})?)`;
+
+// ---------- GTB ----------
 export const parseGTB = (sms: string): ParsedSms => {
   const primaryMatch = sms.match(
-    /(?:Debit|Credit)\s+Amt\s*:?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Debit|Credit)\\s+Amt\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const fallbackMatch = sms.match(
-    /(?:Amt|Amount)\s*:?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Amt|Amount)\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = primaryMatch
@@ -34,21 +42,28 @@ export const parseGTB = (sms: string): ParsedSms => {
   };
 };
 
-// Access Bank
+// ---------- Access ----------
 export const parseAccess = (sms: string): ParsedSms => {
   const amountMatch = sms.match(
-    /(?:debit|credit)\s+of\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:debit|credit)\\s+of\\s+${AMOUNT_TAIL}`, 'i')
   );
 
-  const fallbackMatch = sms.match(
-    /(?:Debit|Credit)\s+Alert\s*:?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+  const alertMatch = sms.match(
+    new RegExp(`(?:Debit|Credit)\\s+Alert\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
+  );
+
+  // "Acct: XXXX ... Amt: NGN 15,000.00 Dr" — Access signature without the bank name
+  const bareAmtMatch = sms.match(
+    new RegExp(`(?:Amt|Amount)\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = amountMatch
     ? parseAmount(amountMatch[1])
-    : fallbackMatch
-      ? parseAmount(fallbackMatch[1])
-      : null;
+    : alertMatch
+      ? parseAmount(alertMatch[1])
+      : bareAmtMatch
+        ? parseAmount(bareAmtMatch[1])
+        : null;
 
   return {
     amount,
@@ -61,14 +76,14 @@ export const parseAccess = (sms: string): ParsedSms => {
   };
 };
 
-// UBA 
+// ---------- UBA ----------
 export const parseUBA = (sms: string): ParsedSms => {
   const primaryMatch = sms.match(
-    /(?:debited|credited)\s+with\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:debited|credited)\\s+with\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const fallbackMatch = sms.match(
-    /(?:debited|credited)\s+with\s+[N₦]([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Debit|Credit)\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = primaryMatch
@@ -88,14 +103,14 @@ export const parseUBA = (sms: string): ParsedSms => {
   };
 };
 
-// FirstBank
+// ---------- FirstBank ----------
 export const parseFirstBank = (sms: string): ParsedSms => {
   const primaryMatch = sms.match(
-    /(?:debited|credited)\s+with\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:debited|credited)\\s+with\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const fallbackMatch = sms.match(
-    /(?:Debit|Credit)\s*:?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Debit|Credit)\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = primaryMatch
@@ -115,18 +130,18 @@ export const parseFirstBank = (sms: string): ParsedSms => {
   };
 };
 
-// Opay
+// ---------- Opay ----------
 export const parseOpay = (sms: string): ParsedSms => {
   const primaryMatch = sms.match(
-    /NGN?([\d,]+(?:\.\d{1,2})?)\s+has\s+been\s+(?:deducted|credited)/i
+    new RegExp(`${AMOUNT_TAIL}\\s+has\\s+been\\s+(?:deducted|credited)`, 'i')
   );
 
   const fallbackMatch = sms.match(
-    /(?:Debit|Credit)\s+Alert!?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Debit|Credit)\\s+Alert!?\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const receivedMatch = sms.match(
-    /(?:received|paid|sent)\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:received|paid|sent)\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = primaryMatch
@@ -148,18 +163,18 @@ export const parseOpay = (sms: string): ParsedSms => {
   };
 };
 
-// Kuda
+// ---------- Kuda ----------
 export const parseKuda = (sms: string): ParsedSms => {
   const spentMatch = sms.match(
-    /You\s+spent\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`You\\s+spent\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const receivedMatch = sms.match(
-    /You\s+received\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`You\\s+received\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const debitedMatch = sms.match(
-    /NGN?([\d,]+(?:\.\d{1,2})?)\s+was\s+(?:debited|credited)/i
+    new RegExp(`${AMOUNT_TAIL}\\s+was\\s+(?:debited|credited)`, 'i')
   );
 
   const amount = spentMatch
@@ -181,14 +196,14 @@ export const parseKuda = (sms: string): ParsedSms => {
   };
 };
 
-// Moniepoint
+// ---------- Moniepoint ----------
 export const parseMoniepoint = (sms: string): ParsedSms => {
   const primaryMatch = sms.match(
-    /A\s+(?:debit|credit)\s+of\s+NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`A\\s+(?:debit|credit)\\s+of\\s+${AMOUNT_TAIL}`, 'i')
   );
 
   const fallbackMatch = sms.match(
-    /(?:Debit|Credit)\s*:?\s*NGN?([\d,]+(?:\.\d{1,2})?)/i
+    new RegExp(`(?:Debit|Credit)\\s*:?\\s*${AMOUNT_TAIL}`, 'i')
   );
 
   const amount = primaryMatch
@@ -208,8 +223,7 @@ export const parseMoniepoint = (sms: string): ParsedSms => {
   };
 };
 
-
-// detectBank — identifies the bank from SMS content or sender ID
+// ---------- detectBank ----------
 export const detectBank = (
   sms: string,
   senderId?: string
@@ -223,7 +237,12 @@ export const detectBank = (
     },
     {
       bank: 'Access',
-      patterns: [/ACCESS\s+BANK/i, /\bACCESSBANK\b/i, /ACCESS\s+DIAMOND/i],
+      patterns: [
+        /ACCESS\s+BANK/i,
+        /\bACCESSBANK\b/i,
+        /ACCESS\s+DIAMOND/i,
+        /\bACCESS\b/i, // SMS that starts with "Access:"
+      ],
     },
     {
       bank: 'UBA',
@@ -231,7 +250,7 @@ export const detectBank = (
     },
     {
       bank: 'FirstBank',
-      patterns: [/FIRST\s*BANK/i, /FIRSTBANK/i, /FIRST\s+BANK\s+OF\s+NIGERIA/i],
+      patterns: [/FIRST\s*BANK/i, /FIRSTBANK/i, /FIRST\s+BANK\s+OF\s+NIGERIA/i, /\bFBN\b/i],
     },
     {
       bank: 'Opay',
@@ -253,13 +272,16 @@ export const detectBank = (
     }
   }
 
+  // Fallback heuristics for SMS that don't print the bank name:
+  // "Acct: XXXX ... Amt: NGN 15,000.00 Dr" — Access signature
+  if (/\bAC(?:CT)?\s*[:.]?\s*\d/i.test(haystack) && /\bDR\b/i.test(haystack)) {
+    return 'Access';
+  }
+
   return null;
 };
 
-
-
-
-// parseSms — main dispatcher
+// ---------- parseSms ----------
 export const parseSms = (sms: string, senderId?: string): ParseResult => {
   const bank = detectBank(sms, senderId);
 

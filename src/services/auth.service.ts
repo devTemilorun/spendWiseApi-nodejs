@@ -22,6 +22,9 @@ const buildTokens = (user: IUser) => {
   return { accessToken, refreshToken };
 };
 
+const RESET_TTL_MS = 30 * 60 * 1000; 
+
+
 export const register = async (data: RegisterInput) => {
   const existing = await User.findOne({ email: data.email });
   if (existing) throw new AppError('Email already registered', 409);
@@ -110,4 +113,39 @@ export const changePassword = async (
   await user.save();
 
   return { message: 'Password updated. Please log in again.' };
+};
+
+
+export const forgotPassword = async (email: string): Promise<string | null> => {
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) return null;
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  user.passwordResetToken = tokenHash;
+  user.passwordResetExpires = new Date(Date.now() + RESET_TTL_MS);
+  await user.save();
+
+  return rawToken;
+};
+
+export const resetPassword = async (
+  rawToken: string,
+  newPassword: string
+): Promise<void> => {
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: tokenHash,
+    passwordResetExpires: { $gt: new Date() },
+  }).select('+passwordResetToken +passwordResetExpires +password');
+
+  if (!user) throw new AppError('Invalid or expired reset token', 400);
+
+  user.password = newPassword; 
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  user.refreshTokenHash = undefined; 
+  await user.save();
 };
