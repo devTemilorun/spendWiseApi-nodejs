@@ -8,8 +8,6 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "dev": "nodemon --watch src --ext ts --exec \"tsx src/server.ts\"",
-    "seed:categories": "ts-node src/scripts/seedCategories.ts",
-    "seed:demo": "ts-node src/scripts/seedDemo.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
